@@ -146,31 +146,6 @@ SCRIPTS = [
 ASSET_ICONS  = {"Gold": "🥇", "Silver": "🥈", "Nifty50": "📊", "Nifty100": "📈", "Nifty200": "📉", "Nifty500": "🗺️"}
 ASSET_COLORS = {"Gold": "#f5c842", "Silver": "#b0c4d8", "Nifty50": "#7eb8f7"}
 
-# ── Dashboard Sidebar ─────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⚙️ Engine Controls")
-    
-    # ── Connection Troubleshooter ──
-    with st.expander("🛠️ Connection Troubleshooter"):
-        st.write("Checking Google Sheets Status...")
-        try:
-            test_clients = sheets_db.load_clients()
-            if not test_clients.empty:
-                st.success(f"✅ Connected! Found {len(test_clients)} clients.")
-            else:
-                st.warning("⚠️ Connected, but 'clients' sheet appears empty.")
-        except Exception as e:
-            st.error(f"❌ Connection Failed: {e}")
-            st.info("Ensure you have shared your Google Sheet with the service account email.")
-
-    if st.button("🔄 Sync Live Market Data", use_container_width=True, key="sidebar_sync"):
-        with st.spinner("Executing Analytics Pipeline..."):
-            success, msg = run_pipeline()
-            if success:
-                st.success("Market Data Synchronized!")
-                st.rerun()
-            else:
-                st.error(msg)
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -710,6 +685,33 @@ def render_floating_assistant() -> None:
     }})();
     </script>
     """, unsafe_allow_html=True)
+
+
+# ── Dashboard Sidebar ─────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ Engine Controls")
+    
+    # ── Connection Troubleshooter ──
+    with st.expander("🛠️ Connection Troubleshooter"):
+        st.write("Checking Google Sheets Status...")
+        try:
+            test_clients = sheets_db.load_clients()
+            if not test_clients.empty:
+                st.success(f"✅ Connected! Found {len(test_clients)} clients.")
+            else:
+                st.warning("⚠️ Connected, but 'clients' sheet appears empty.")
+        except Exception as e:
+            st.error(f"❌ Connection Failed: {e}")
+            st.info("Ensure you have shared your Google Sheet with the service account email.")
+
+    if st.button("🔄 Sync Live Market Data", use_container_width=True, key="sidebar_sync"):
+        with st.spinner("Executing Analytics Pipeline..."):
+            success, msg = run_pipeline()
+            if success:
+                st.success("Market Data Synchronized!")
+                st.rerun()
+            else:
+                st.error(msg)
 
 # ── DATA ──────────────────────────────────────────────────────────────────────
 df = load_data()
