@@ -90,18 +90,15 @@ def _get_spreadsheet():
                 logger.error(f"Failed to parse GCP_SERVICE_ACCOUNT_JSON: {e}")
 
     if not creds:
-        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", DEFAULT_CREDENTIALS_PATH)
-        if os.path.exists(credentials_path):
-            creds = Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-            logger.info(f"Loaded Google credentials from file: {credentials_path}")
-        else:
-            logger.warning(f"Google credentials not found at {credentials_path} and secrets are missing.")
-            # We don't raise here yet, as some operations might not need sheets, 
-            # but _get_spreadsheet will eventually be called.
+        raise ValueError("CRITICAL: No Google credentials found. Please ensure you have added the [GCP_SERVICE_ACCOUNT] section to your Streamlit Secrets on the Cloud Dashboard.")
 
-    _gc = gspread.authorize(creds)
-    _spreadsheet = _gc.open_by_key(SPREADSHEET_ID)
-    return _spreadsheet
+    try:
+        _gc = gspread.authorize(creds)
+        _spreadsheet = _gc.open_by_key(SPREADSHEET_ID)
+        return _spreadsheet
+    except Exception as e:
+        logger.error(f"GSpread Authorization/Open Failed: {e}")
+        raise
 
 def _worksheet(tab_name: str):
     return get_spreadsheet().worksheet(tab_name)
