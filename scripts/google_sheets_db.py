@@ -68,10 +68,12 @@ def _get_spreadsheet():
     creds = None
     try:
         import streamlit as st
-        if "GCP_SERVICE_ACCOUNT" in st.secrets:
-            service_account_info = dict(st.secrets["GCP_SERVICE_ACCOUNT"])
-            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-            logger.info("Loaded Google credentials from Streamlit Secrets.")
+        # Only check st.secrets if we are actually running inside a Streamlit app
+        if hasattr(st, "runtime") and st.runtime.exists():
+            if "GCP_SERVICE_ACCOUNT" in st.secrets:
+                service_account_info = dict(st.secrets["GCP_SERVICE_ACCOUNT"])
+                creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+                logger.info("Loaded Google credentials from Streamlit Secrets.")
     except Exception:
         pass
 

@@ -25,8 +25,9 @@ def _resolve_gemini_key() -> str:
     # 1. Try Streamlit Secrets (for Cloud Deployment)
     try:
         import streamlit as st
-        if "GEMINI_API_KEY" in st.secrets:
-            return st.secrets["GEMINI_API_KEY"]
+        if hasattr(st, "runtime") and st.runtime.exists():
+            if "GEMINI_API_KEY" in st.secrets:
+                return st.secrets["GEMINI_API_KEY"]
     except Exception:
         pass
     
