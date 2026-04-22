@@ -1058,12 +1058,28 @@ elif st.session_state.page == "Portfolio Overview":
                 fig_pa.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#e8f0fe", legend_title_text="Series")
                 st.plotly_chart(fig_pa, use_container_width=True)
         with pa2:
-            # Asset Allocation pie chart explicit mockup matching user specifications
-            alloc_df = pd.DataFrame({
-                "Asset": ["Equity", "Gold", "Silver", "Cash"],
-                "Weight": [55, 20, 10, 15]
-            })
-            fig_pie = px.pie(alloc_df, values="Weight", names="Asset", title="Global Portfolio Allocation", hole=0.5, color="Asset", color_discrete_map={"Equity":"#3b82f6", "Gold":"#fbbf24", "Silver":"#94a3b8", "Cash":"#34d399"})
+            # Connect to REAL Google Sheets allocation data
+            try:
+                import scripts.agent_tools as tools
+                alloc_data = tools.get_portfolio_allocation()
+                
+                if alloc_data.get("status") == "ok":
+                    alloc_list = alloc_data.get("allocation", [])
+                    alloc_df = pd.DataFrame(alloc_list)
+                    # Map to the format expected by the chart
+                    alloc_df.rename(columns={"asset": "Asset", "market_value": "Weight"}, inplace=True)
+                else:
+                    # Professional Fallback Mockup if no real data is found yet
+                    alloc_df = pd.DataFrame({
+                        "Asset": ["Equity", "Gold", "Silver", "Cash"],
+                        "Weight": [55, 20, 10, 15]
+                    })
+            except Exception as e:
+                logger.error(f"Failed to load real allocation: {e}")
+                alloc_df = pd.DataFrame({"Asset": ["Error"], "Weight": [1]})
+
+            fig_pie = px.pie(alloc_df, values="Weight", names="Asset", title="Global Portfolio Allocation", hole=0.5, color="Asset", 
+                           color_discrete_map={"Equity":"#3b82f6", "Gold":"#fbbf24", "Silver":"#94a3b8", "Cash":"#34d399"})
             fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#e8f0fe")
             st.plotly_chart(fig_pie, use_container_width=True)
 
