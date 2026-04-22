@@ -171,6 +171,9 @@ with st.sidebar:
                 st.rerun()
             else:
                 st.error(msg)
+
+# ── Custom CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
 <style>
     /* 1. FORCE TRANSPARENCY - Critical for Vanta.js */
     [data-testid="stAppViewContainer"], [data-testid="stMain"], .stApp, [data-testid="stHeader"] {
