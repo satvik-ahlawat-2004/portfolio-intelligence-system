@@ -693,13 +693,18 @@ with st.sidebar:
     
     # ── Connection Troubleshooter ──
     with st.expander("🛠️ Connection Troubleshooter"):
-        st.write("Checking Google Sheets Status...")
+        st.write("Diagnostic Mode...")
         try:
+            sh = sheets_db.get_spreadsheet()
+            st.write(f"📁 Spreadsheet: **{sh.title}**")
+            tabs = [w.title for w in sh.worksheets()]
+            st.write(f"📄 Tabs Found: {', '.join(tabs)}")
+            
             test_clients = sheets_db.load_clients()
             if not test_clients.empty:
                 st.success(f"✅ Connected! Found {len(test_clients)} clients.")
             else:
-                st.warning("⚠️ Connected, but 'clients' sheet appears empty.")
+                st.warning(f"⚠️ Tab 'clients' was found but it appears empty.")
         except Exception as e:
             st.error(f"❌ Connection Failed: {e}")
             st.info("Ensure you have shared your Google Sheet with the service account email.")
