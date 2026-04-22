@@ -1,0 +1,15 @@
+pandas
+numpy
+scipy
+yfinance
+fastapi
+uvicorn
+streamlit
+plotly
+gspread
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-generativeai
+google-genai
+python-dotenv

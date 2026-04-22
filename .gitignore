@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+env/
+venv/
+ENV/
+
+# Secrets & Local Config
+.env
+credentials.json
+*.img
+*.png
+*.webp
+*.mp4
+
+# Data
+data/*.csv
+data/*.xlsx
+data/market_analytics.csv
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Artifacts/System
+.gemini/
+.system_generated/
+deployment_guide.md

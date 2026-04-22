@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PMS Operations Automation Framework">
+    <title>WealthPMS - Advanced Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .ai-card {
+            background: linear-gradient(145deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+        }
+        .ai-health-ring {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: 700;
+            border: 8px solid var(--accent);
+            margin: 0 auto 20px;
+        }
+        .ai-pill {
+            display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+            background: rgba(59, 130, 246, 0.2); color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        /* Modal Styling (Inline to bypass browser cache) */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--bg-card); width: 400px; padding: 24px;
+            border-radius: 12px; border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .close-btn {
+            background: transparent; color: var(--text-main); border: none; font-size: 1.5rem; cursor: pointer;
+        }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted); }
+        .form-control {
+            width: 100%; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border-color);
+            border-radius: 6px; color: var(--text-main); font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <h2>Wealth<span>PMS</span></h2>
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-target="dashboard" onclick="switchSection('dashboard')">Dashboard</li>
+                <li data-target="ai-advisor" style="color: var(--primary); font-weight:600;" onclick="switchSection('ai-advisor')">✨ AI Advisor</li>
+                <li data-target="market" onclick="switchSection('market')">Market Intelligence</li>
+                <li data-target="clients" onclick="switchSection('clients')">Clients</li>
+                <li data-target="holdings" onclick="switchSection('holdings')">Holdings</li>
+                <li data-target="transactions" onclick="switchSection('transactions')">Transactions</li>
+                <li data-target="compliance" onclick="switchSection('compliance')">Compliance</li>
+                <li data-target="reports" onclick="switchSection('reports')">Reports</li>
+            </ul>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Portfolio Management Operations</h1>
+                <div class="user-profile">Ops Team</div>
+            </header>
+
+            <div id="alert-notifications" style="padding: 0 24px; margin-top: 10px;"></div>
+
+            <!-- Add Client Modal -->
+            <div id="add-client-modal" class="modal-overlay">
+                <div class="modal-content card">
+                    <div class="modal-header">
+                        <h2>✨ Onboard New Client</h2>
+                        <button class="close-btn" onclick="closeAddClientModal()">×</button>
+                    </div>
+                    <form id="add-client-form">
+                        <div class="form-group">
+                            <label>Client ID (e.g., C011)</label>
+                            <input type="text" id="new-client-id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="new-client-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Risk Profile</label>
+                            <select id="new-client-risk" class="form-control" required>
+                                <option value="Conservative">Conservative</option>
+                                <option value="Moderate">Moderate</option>
+                                <option value="Aggressive">Aggressive</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="primary-btn" style="width:100%; margin-top:16px;">Save Client to Database</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Remove Client Modal -->
+            <div id="remove-client-modal" class="modal-overlay">
+                <div class="modal-content card">
+                    <div class="modal-header">
+                        <h2>🗑️ Remove Client</h2>
+                        <button class="close-btn" onclick="closeRemoveClientModal()">×</button>
+                    </div>
+                    <form id="remove-client-form">
+                        <div class="form-group">
+                            <label>Client ID to Remove (e.g., C011)</label>
+                            <input type="text" id="remove-client-id" class="form-control" required>
+                        </div>
+                        <button type="submit" class="primary-btn" style="width:100%; margin-top:16px; background: var(--danger);">Delete from Database</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="content-sections">
+                
+                <!-- Operations Dashboard -->
+                <section id="dashboard" class="content-section active">
+                    <h2>Dashboard Overview</h2>
+                    <div id="dashboardKPIGrid" class="kpi-cards" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                        <!-- Dynamically injected KPI cards -->
+                    </div>
+
+                    <h2 style="margin-top: 32px">Portfolio Analytics</h2>
+                    <div id="portfolioCharts" class="charts-container" style="grid-template-columns: 1fr 1fr;">
+                        <div class="chart-wrapper">
+                            <h3>Portfolio Allocation by Sector</h3>
+                            <div style="height: 300px;"><canvas id="sectorAllocationChart"></canvas></div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <h3>Portfolio Returns vs Benchmark</h3>
+                            <div style="height: 300px;"><canvas id="benchmarkChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <h2 style="margin-top: 32px">Market Overview</h2>
+                    <div id="marketOverview" class="kpi-cards" style="grid-template-columns: repeat(4, 1fr);">
+                        <!-- Dynamically injected Market cards -->
+                    </div>
+                </section>
+
+                <!-- AI Portfolio Advisor -->
+                <section id="ai-advisor" class="content-section">
+                    <h2 style="display:flex; align-items:center; gap:8px;">✨ AI Portfolio Advisor</h2>
+                    <p style="color:var(--text-muted); margin-bottom: 24px;">Intelligent portfolio and market analysis driven by live telemetry.</p>
+                    
+                    <div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+                        <!-- Left Panel: Score and Holding Analysis -->
+                        <div>
+                            <div class="card" style="text-align:center; padding:32px 24px;">
+                                <h3 style="margin-bottom:24px;">Portfolio Health</h3>
+                                <div id="ai-health-ring" class="ai-health-ring">100</div>
+                                <p style="color:var(--text-muted); font-size:0.875rem;">Based on diversification, volatility, and benchmark differentials.</p>
+                            </div>
+                            
+                            <div class="card" style="margin-top:24px;">
+                                <h3 style="margin-bottom:16px;">Performance Analysis</h3>
+                                <div style="margin-bottom:12px;">
+                                    <p style="font-size:0.8rem; color:var(--text-muted);">Top Performing Holding</p>
+                                    <p id="ai-top-holding" style="color:var(--accent); font-weight:600;">-</p>
+                                </div>
+                                <div style="margin-bottom:12px;">
+                                    <p style="font-size:0.8rem; color:var(--text-muted);">Worst Performing Holding</p>
+                                    <p id="ai-worst-holding" style="color:var(--danger); font-weight:600;">-</p>
+                                </div>
+                                <div style="margin-bottom:12px;">
+                                    <p style="font-size:0.8rem; color:var(--text-muted);">Largest Contributor</p>
+                                    <p id="ai-top-contributor" style="font-weight:600;">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Panel: Insights and Rebalancing -->
+                        <div>
+                            <h3>Strategic Recommendations</h3>
+                            <div id="ai-insights-container" style="margin-top: 16px;">
+                                <!-- Dynamically injected AI insights -->
+                            </div>
+                            
+                            <h3 style="margin-top:24px;">Market Inference</h3>
+                            <div id="ai-market-insights-container" style="margin-top: 16px;">
+                                <!-- Dynamically injected Market Insights -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Market Intelligence -->
+                <section id="market" class="content-section">
+                    <h2>Market Intelligence</h2>
+                    <p style="color:var(--text-muted); margin-bottom: 20px;">Live updates pulling every 60s.</p>
+
+                    <div class="kpi-cards" style="margin-bottom: 24px;">
+                        <div class="card">
+                            <h3>NIFTY 50</h3>
+                            <p id="nifty-value" class="highlight">0.00</p>
+                            <p id="nifty-change" class="positive">0.00%</p>
+                        </div>
+                        <div class="card">
+                            <h3>BSE SENSEX</h3>
+                            <p id="sensex-value" class="highlight">0.00</p>
+                            <p id="sensex-change" class="positive">0.00%</p>
+                        </div>
+                        <div class="card">
+                            <h3>Market Top Gainer</h3>
+                            <p id="market-top-gainer" style="font-weight:600; font-size:1.2rem; color:var(--accent);">-</p>
+                        </div>
+                    </div>
+
+                    <h3>Market Watch</h3>
+                    <table class="data-table" style="margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Company Name</th>
+                                <th>Current Price</th>
+                                <th>Daily Change</th>
+                                <th>% Change</th>
+                                <th>Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Compliance -->
+                <section id="compliance" class="content-section">
+                    <h2>Compliance Dashboard</h2>
+                    <div class="alert-box warning">
+                        <strong>Alert:</strong> <span id="kyc-expiring-count">0</span> clients with expiring KYC within 30 days.
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Client ID</th>
+                                <th>KYC Status</th>
+                                <th>Expiry Date</th>
+                                <th>Compliance Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="compliance-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Client Management -->
+                <section id="clients" class="content-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+                        <h2>Client Management</h2>
+                        <div style="display:flex; gap: 12px;">
+                            <button class="primary-btn" onclick="openAddClientModal()">+ Add Client</button>
+                            <button class="primary-btn" style="background:var(--danger);" onclick="openRemoveClientModal()">- Remove Client</button>
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Client ID</th>
+                                <th>Name</th>
+                                <th>Risk Profile</th>
+                                <th>Current Value</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Portfolio Holdings -->
+                <section id="holdings" class="content-section">
+                    <h2>Portfolio Holdings & Impact</h2>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Client ID</th>
+                                <th>Stock Name</th>
+                                <th>Quantity</th>
+                                <th>Live Value</th>
+                                <th>Daily Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdings-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Transactions -->
+                <section id="transactions" class="content-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+                        <h2>Transactions</h2>
+                        <button class="primary-btn">+ Add Transaction</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Txn ID</th>
+                                <th>Client ID</th>
+                                <th>Stock</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Reports -->
+                <section id="reports" class="content-section">
+                    <h2>Client Reports Generator</h2>
+                    <button id="generate-reports-btn" class="primary-btn">Generate Monthly Reports</button>
+                    <table class="data-table" style="margin-top: 20px;">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Client ID</th>
+                                <th>Portfolio Value</th>
+                                <th>Return %</th>
+                                <th>Commentary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-table-body">
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- App Module Entry Point -->
+    <script type="module" src="./app.js"></script>
+</body>
+</html>

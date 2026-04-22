@@ -1,0 +1,260 @@
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.screen {
+  width: 100%; min-height: 620px; position: relative;
+  overflow: hidden; background: #03040e;
+  font-family: -apple-system, 'Inter', BlinkMacSystemFont, sans-serif;
+}
+canvas#bgc { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+.ticker-wrap {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  height: 34px; overflow: hidden;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 0.5px solid rgba(255,255,255,0.08);
+}
+.ticker-track {
+  display: flex; align-items: center; height: 100%;
+  animation: scroll-left 22s linear infinite;
+  width: max-content;
+}
+@keyframes scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.tick {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 22px; height: 100%; white-space: nowrap;
+  border-right: 0.5px solid rgba(255,255,255,0.06);
+  font-size: 11px;
+}
+.tick .sym { color: rgba(255,255,255,0.3); font-size: 10px; letter-spacing: 0.05em; }
+.tick .val { color: rgba(255,255,255,0.9); font-weight: 600; }
+.tick .up { color: #34d399; font-size: 10px; }
+.tick .dn { color: #f87171; font-size: 10px; }
+.tick .dot { width: 4px; height: 4px; border-radius: 50%; background: #34d399; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.nav {
+  position: absolute; top: 34px; left: 0; right: 0; z-index: 20;
+  display: flex; justify-content: center; gap: 8px; padding: 12px 16px;
+}
+.nb {
+  padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 500;
+  color: rgba(255,255,255,0.85); cursor: pointer; transition: all 0.3s;
+  white-space: nowrap;
+}
+.nb.on { background: #4F46E5; color: #fff; }
+.nb:not(.on) { background: rgba(255,255,255,0.07); border: 0.5px solid rgba(255,255,255,0.12); }
+
+.hero {
+  position: absolute; top: 110px; left: 0; right: 0; z-index: 10; padding: 0 36px;
+}
+.hero-eyebrow {
+  font-size: 9px; letter-spacing: 0.22em; color: rgba(255,255,255,0.25);
+  text-transform: uppercase; margin-bottom: 10px;
+  animation: fadein 1s ease both;
+}
+.hero-title {
+  font-size: clamp(30px, 5vw, 46px); font-weight: 800; color: #fff;
+  line-height: 1.05; letter-spacing: -0.035em; margin-bottom: 8px;
+  animation: fadein 1s 0.1s ease both;
+}
+.hero-title span {
+  background: linear-gradient(135deg, #818cf8, #c084fc, #38bdf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+  font-size: 12px; color: rgba(255,255,255,0.3); font-style: italic;
+  margin-bottom: 24px; animation: fadein 1s 0.2s ease both;
+}
+@keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.snap-label {
+  font-size: 8px; letter-spacing: 0.22em; color: rgba(255,255,255,0.2);
+  text-transform: uppercase; margin-bottom: 10px;
+  animation: fadein 1s 0.3s ease both;
+}
+.cards { display: flex; gap: 10px; animation: fadein 1s 0.4s ease both; }
+.card {
+  flex: 1; border-radius: 12px; padding: 14px 15px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(20px);
+  transition: border-color 0.3s, background 0.3s;
+  position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: -40%; left: -20%;
+  width: 80%; height: 80%; border-radius: 50%;
+  opacity: 0.12; pointer-events: none;
+}
+.card.g24::before { background: radial-gradient(#fbbf24, transparent); }
+.card.g22::before { background: radial-gradient(#f59e0b, transparent); }
+.card.sv::before  { background: radial-gradient(#94a3b8, transparent); }
+
+.card:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.2); }
+.cico { font-size: 18px; margin-bottom: 6px; display: block; }
+.cname { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.06em; margin-bottom: 1px; }
+.clabel { font-size: 9px; color: rgba(255,255,255,0.2); margin-bottom: 8px; }
+.cprice { font-size: 19px; font-weight: 800; color: #fff; letter-spacing: -0.025em; margin-bottom: 8px; }
+.crow { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.ck { font-size: 9px; color: rgba(255,255,255,0.25); }
+.cv { font-size: 9px; color: rgba(255,255,255,0.6); font-weight: 600; }
+.bull { color: #34d399; font-size: 9px; font-weight: 700; }
+.bear { color: #f87171; font-size: 9px; font-weight: 700; }
+
+.indices {
+  position: absolute; bottom: 20px; left: 36px; right: 36px; z-index: 20;
+  display: flex; gap: 10px; animation: fadein 1s 0.6s ease both;
+}
+.idx {
+  flex: 1; background: rgba(255,255,255,0.03);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 10px 12px; text-align: center;
+}
+.idx-name { font-size: 9px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; margin-bottom: 4px; }
+.idx-val { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.idx-chg { font-size: 9px; color: #34d399; font-weight: 600; }
+</style>
+
+<div class="screen">
+  <canvas id="bgc"></canvas>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="tt"></div>
+  </div>
+
+  <div class="nav">
+    <div class="nb on">Market Overview</div>
+    <div class="nb">Price History</div>
+    <div class="nb">Technical Analysis</div>
+    <div class="nb">Portfolio Overview</div>
+    <div class="nb">Client Returns</div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Automated Financial Market Tracking</div>
+    <div class="hero-title">Portfolio <span>Intelligence</span><br>System</div>
+    <div class="hero-sub">Real-time tracking &amp; client portfolio management.</div>
+    <div class="snap-label">Market Snapshot</div>
+    <div class="cards">
+      <!-- DYNAMIC_CARDS -->
+    </div>
+  </div>
+
+  <div class="indices">
+    <!-- DYNAMIC_INDICES -->
+  </div>
+</div>
+
+<script>
+const ticks = [
+  /* DYNAMIC_TICKS */
+];
+const tt = document.getElementById('tt');
+[...ticks, ...ticks].forEach(t => {
+  const d = document.createElement('div');
+  d.className = 'tick';
+  d.innerHTML = `<div class="dot" style="background:${t.up?'#34d399':'#f87171'}"></div><span class="sym">${t.sym}</span><span class="val">${t.val}</span><span class="${t.up?'up':'dn'}">${t.chg}</span>`;
+  tt.appendChild(d);
+});
+
+const canvas = document.getElementById('bgc');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const s = canvas.parentElement;
+  canvas.width = s.offsetWidth || 680;
+  canvas.height = s.offsetHeight || 620;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const orbs = [
+  { x:0.12, y:0.25, vx:0.00035, vy:0.00022, r:0.52, c1:'#4338ca', c2:'#7c3aed', ph:0.0 },
+  { x:0.75, y:0.10, vx:-0.0003, vy:0.00028, r:0.42, c1:'#0369a1', c2:'#06b6d4', ph:1.3 },
+  { x:0.85, y:0.72, vx:-0.00028, vy:-0.0003, r:0.38, c1:'#7c3aed', c2:'#db2777', ph:2.5 },
+  { x:0.35, y:0.85, vx:0.00032, vy:-0.00025, r:0.33, c1:'#059669', c2:'#0284c7', ph:3.7 },
+  { x:0.55, y:0.45, vx:-0.00018, vy:0.00020, r:0.28, c1:'#d97706', c2:'#dc2626', ph:0.9 },
+  { x:0.92, y:0.35, vx:-0.00025, vy:0.00015, r:0.30, c1:'#be185d', c2:'#7c3aed', ph:4.2 },
+];
+
+const stars = Array.from({length:60}, () => ({
+  x: Math.random(), y: Math.random(),
+  r: 0.4 + Math.random() * 1.2,
+  alpha: 0.1 + Math.random() * 0.4,
+  ph: Math.random() * Math.PI * 2,
+  spd: 0.001 + Math.random() * 0.003
+}));
+
+let t = 0;
+function frame() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#03040e';
+  ctx.fillRect(0, 0, W, H);
+
+  orbs.forEach(o => {
+    o.x += o.vx + Math.sin(t * 0.0006 + o.ph) * 0.00015;
+    o.y += o.vy + Math.cos(t * 0.0005 + o.ph) * 0.00015;
+    if (o.x < -0.3) o.x = 1.3;
+    if (o.x > 1.3) o.x = -0.3;
+    if (o.y < -0.3) o.y = 1.3;
+    if (o.y > 1.3) o.y = -0.3;
+
+    const cx = o.x * W, cy = o.y * H;
+    const pulse = 0.85 + 0.15 * Math.sin(t * 0.002 + o.ph);
+    const r = o.r * Math.min(W, H) * pulse;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, o.c1 + 'cc');
+    g.addColorStop(0.35, o.c2 + '77');
+    g.addColorStop(0.7, o.c1 + '22');
+    g.addColorStop(1, 'transparent');
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  });
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  stars.forEach(s => {
+    const a = s.alpha * (0.5 + 0.5 * Math.sin(t * s.spd + s.ph));
+    ctx.fillStyle = `rgba(220,210,255,${a})`;
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const rx = ((t * (0.4 + i * 0.15) + i * 300) % (W + 200)) - 100;
+    const ry = (i === 0 ? H * 0.3 : i === 1 ? H * 0.6 : H * 0.15);
+    const rg = ctx.createLinearGradient(rx - 60, ry, rx + 200, ry);
+    const cols = ['rgba(129,140,248,', 'rgba(167,139,250,', 'rgba(56,189,248,'];
+    rg.addColorStop(0, cols[i] + '0)');
+    rg.addColorStop(0.4, cols[i] + '0.06)');
+    rg.addColorStop(1, cols[i] + '0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(rx - 60, ry - 1, 260, 2);
+  }
+
+  const vg = ctx.createLinearGradient(0, 0, 0, H);
+  vg.addColorStop(0, 'rgba(3,4,14,0)');
+  vg.addColorStop(0.6, 'rgba(3,4,14,0.15)');
+  vg.addColorStop(1, 'rgba(3,4,14,0.9)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+
+  t++;
+  requestAnimationFrame(frame);
+}
+frame();
+
+document.querySelectorAll('.nb').forEach(b => {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('.nb').forEach(x => x.classList.remove('on'));
+    this.classList.add('on');
+  });
+});
+</script>

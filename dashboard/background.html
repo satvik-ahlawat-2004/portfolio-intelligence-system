@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:transparent;overflow:hidden;}
+  canvas{
+    position:fixed;
+    top:0;left:0;
+    width:100vw;height:100vh;
+    pointer-events:none;
+  }
+  #bg{z-index:-9999;}
+  #fg{z-index:-9998;}
+  #pms-mouse-glow{
+    position:fixed;z-index:-9997;
+    border-radius:50%;
+    width:420px;height:420px;
+    pointer-events:none;
+    background:radial-gradient(circle,rgba(127,119,221,.07) 0%,transparent 68%);
+    transform:translate(-50%,-50%);
+    transition:left .06s,top .06s;
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="fg"></canvas>
+<div id="pms-mouse-glow"></div>
+
+<script>
+(function(){
+  const bg=document.getElementById('bg');
+  const fg=document.getElementById('fg');
+  const glowEl=document.getElementById('pms-mouse-glow');
+
+  /* ── mouse parallax ── */
+  let mx=window.parent.innerWidth/2, my=window.parent.innerHeight/2;
+  window.parent.document.addEventListener('mousemove',function(e){
+    mx=e.clientX; my=e.clientY;
+    glowEl.style.left=mx+'px';
+    glowEl.style.top=my+'px';
+  });
+
+  /* ── canvas sizing ── */
+  function resize(){
+    const W=window.parent.innerWidth, H=window.parent.innerHeight;
+    const dpr=window.parent.devicePixelRatio||1;
+    [bg,fg].forEach(c=>{
+      c.width=W*dpr; c.height=H*dpr;
+      c.style.width=W+'px'; c.style.height=H+'px';
+    });
+  }
+  resize();
+  window.parent.addEventListener('resize',resize);
+
+  const W=()=>bg.width, H=()=>bg.height;
+  const bx=bg.getContext('2d'), fx=fg.getContext('2d');
+
+  /* ════ 4D HYPERCUBE ════ */
+  const verts4=[];
+  for(let x=-1;x<=1;x+=2)for(let y=-1;y<=1;y+=2)
+    for(let z=-1;z<=1;z+=2)for(let w=-1;w<=1;w+=2)
+      verts4.push([x,y,z,w]);
+  const edges4=[];
+  for(let i=0;i<16;i++)for(let j=i+1;j<16;j++){
+    let d=0;
+    for(let k=0;k<4;k++) if(verts4[i][k]!==verts4[j][k]) d++;
+    if(d===1) edges4.push([i,j]);
+  }
+  let a1=0,a2=0,a3=0,a4=0;
+
+  function rot4(v){
+    let [x,y,z,w]=v, nx,ny,nz,nw;
+    nx=x*Math.cos(a1)-y*Math.sin(a1); ny=x*Math.sin(a1)+y*Math.cos(a1); x=nx;y=ny;
+    nz=z*Math.cos(a2)-w*Math.sin(a2); nw=z*Math.sin(a2)+w*Math.cos(a2); z=nz;w=nw;
+    nx=x*Math.cos(a3)-z*Math.sin(a3); nz=x*Math.sin(a3)+z*Math.cos(a3); x=nx;z=nz;
+    ny=y*Math.cos(a4)-w*Math.sin(a4); nw=y*Math.sin(a4)+w*Math.cos(a4); y=ny;w=nw;
+    return[x,y,z,w];
+  }
+  function p4to2(v4){
+    const[x,y,z,w]=v4;
+    const d4=2.8,s4=1/(d4-w),x3=x*s4,y3=y*s4,z3=z*s4;
+    const d3=4,s3=1/(d3-z3);
+    const dim=Math.min(W(),H());
+    return{px:x3*s3*dim*.2+W()/2, py:y3*s3*dim*.2+H()/2, depth:s4+s3};
+  }
+
+  /* ════ PARTICLES ════ */
+  const COLS=['rgba(127,119,221,','rgba(29,158,117,','rgba(239,159,39,','rgba(55,138,221,','rgba(212,83,126,'];
+  const particles=Array.from({length:180},()=>({
+    x:Math.random(),y:Math.random(),
+    vx:(Math.random()-.5)*.0007, vy:(Math.random()-.5)*.0007,
+    r:Math.random()*1.8+.4,
+    col:COLS[Math.floor(Math.random()*COLS.length)],
+    ph:Math.random()*Math.PI*2
+  }));
+
+  /* ════ CANDLESTICKS ════ */
+  const candles=Array.from({length:22},()=>({
+    x:Math.random(),y:1+Math.random()*.5,
+    vx:(Math.random()-.5)*.0002, vy:-(Math.random()*.0005+.0001),
+    h:Math.random()*.14+.04, body:Math.random()*.06+.02,
+    up:Math.random()>.42, life:Math.random()
+  }));
+
+  /* ════ CHART LINES ════ */
+  const lines=Array.from({length:6},(_,i)=>({
+    pts:Array.from({length:100},(__,j)=>({x:j/99,y:.25+i*.08+Math.sin(j*.12+i)*.05})),
+    col:COLS[i%COLS.length],
+    off:Math.random()*200, spd:.0004+Math.random()*.0003
+  }));
+
+  /* ════ AURORA ════ */
+  function drawAurora(ctx,t){
+    const W2=W(),H2=H();
+    [[.25,.3,'rgba(83,74,183,'],[.6,.4,'rgba(15,110,86,'],[.45,.7,'rgba(83,74,183,']].forEach(([fx2,fy,col],i)=>{
+      const gx=W2*(fx2+Math.sin(t*.00025+i)*.12);
+      const gy=H2*(fy+Math.cos(t*.00018+i*.7)*.15);
+      const g=ctx.createRadialGradient(gx,gy,0,gx,gy,W2*.4);
+      g.addColorStop(0,col+'0.14)'); g.addColorStop(1,col+'0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W2,H2);
+    });
+  }
+
+  /* ════ PERSPECTIVE GRID ════ */
+  function drawGrid(ctx,t){
+    const W2=W(),H2=H(),vanX=W2/2,vanY=H2*.58;
+    ctx.save(); ctx.lineWidth=.5;
+    for(let i=0;i<=30;i++){
+      const x=i/30*W2;
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(vanX+(x-vanX)*.2,vanY);
+      ctx.strokeStyle='rgba(127,119,221,0.055)'; ctx.stroke();
+    }
+    for(let j=0;j<=18;j++){
+      const p=j/18,y=vanY+(H2-vanY)*p,sp=p*W2*.95;
+      ctx.globalAlpha=p*.15;
+      ctx.beginPath(); ctx.moveTo(vanX-sp/2,y); ctx.lineTo(vanX+sp/2,y);
+      ctx.strokeStyle='rgba(127,119,221,0.6)'; ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  }
+
+  /* ════ ORBIT RINGS ════ */
+  function drawOrbits(ctx,t){
+    const cx=W()/2,cy=H()/2;
+    [[1.3,0,'rgba(127,119,221,'],[.85,1,'rgba(29,158,117,'],[.5,2,'rgba(239,159,39,']].forEach(([sc,i,col])=>{
+      const ang=t*.00008*(i%2?1:-1)+i*.9;
+      ctx.save();
+      ctx.translate(cx,cy); ctx.rotate(ang*.5); ctx.scale(1,.28);
+      ctx.beginPath();
+      ctx.ellipse(0,0,Math.min(W(),H())*sc*.32,Math.min(W(),H())*sc*.32,0,0,Math.PI*2);
+      ctx.strokeStyle=col+'0.1)'; ctx.lineWidth=.7; ctx.stroke();
+      ctx.restore();
+      const rx=Math.min(W(),H())*sc*.32,ry=rx*.28;
+      const dx=cx+Math.cos(ang)*rx,dy=cy+Math.sin(ang)*ry;
+      const gr=ctx.createRadialGradient(dx,dy,0,dx,dy,8);
+      gr.addColorStop(0,col+'0.9)'); gr.addColorStop(1,col+'0)');
+      ctx.beginPath(); ctx.arc(dx,dy,4,0,Math.PI*2);
+      ctx.fillStyle=gr; ctx.fill();
+    });
+  }
+
+  /* ════ CHART LINES ════ */
+  function drawChartLines(ctx,t){
+    const W2=W(),H2=H();
+    lines.forEach((line,li)=>{
+      line.off+=line.spd;
+      ctx.save(); ctx.beginPath();
+      line.pts.forEach((p,i)=>{
+        const wave=Math.sin(p.x*7+line.off+li)*(.04+Math.sin(t*.0002+li)*.015);
+        const px2=p.x*W2, py2=(p.y+wave)*H2;
+        i===0?ctx.moveTo(px2,py2):ctx.lineTo(px2,py2);
+      });
+      ctx.strokeStyle=line.col+'0.3)'; ctx.lineWidth=1.3; ctx.stroke();
+      ctx.lineTo(W2,H2); ctx.lineTo(0,H2); ctx.closePath();
+      const g=ctx.createLinearGradient(0,H2*.2,0,H2);
+      g.addColorStop(0,line.col+'0.05)'); g.addColorStop(1,line.col+'0)');
+      ctx.fillStyle=g; ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  /* ════ CANDLES ════ */
+  function drawCandles(ctx,t){
+    const W2=W(),H2=H();
+    candles.forEach(c=>{
+      c.x+=c.vx; c.y+=c.vy; c.life+=.0008;
+      if(c.y<-.2||c.x<-.1||c.x>1.1){
+        c.x=Math.random(); c.y=1.1+Math.random()*.4; c.life=0; c.up=Math.random()>.42;
+      }
+      const alpha=Math.max(0,.45*(1-c.life*.9));
+      const col=c.up?'rgba(29,158,117,':'rgba(212,83,126,';
+      ctx.save(); ctx.globalAlpha=alpha;
+      const x=c.x*W2,y=c.y*H2,h=c.h*H2,bh=c.body*H2;
+      ctx.strokeStyle=col+'1)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,y-h/2); ctx.lineTo(x,y+h/2); ctx.stroke();
+      ctx.fillStyle=col+'0.8)';
+      ctx.fillRect(x-3.5,y-bh/2,7,bh);
+      ctx.restore();
+    });
+  }
+
+  /* ════ PARTICLES ════ */
+  function drawParticles(ctx,t){
+    const W2=W(),H2=H();
+    particles.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.ph+=.035;
+      if(p.x<0)p.x=1; if(p.x>1)p.x=0;
+      if(p.y<0)p.y=1; if(p.y>1)p.y=0;
+      const g=Math.sin(p.ph)*.5+.5;
+      const px2=p.x*W2,py2=p.y*H2;
+      particles.forEach(q=>{
+        const dx=(p.x-q.x)*W2,dy=(p.y-q.y)*H2,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<80&&dist>0){
+          ctx.beginPath(); ctx.moveTo(px2,py2); ctx.lineTo(q.x*W2,q.y*H2);
+          ctx.strokeStyle=p.col+((.05*(1-dist/80)).toFixed(3))+')';
+          ctx.lineWidth=.4; ctx.stroke();
+        }
+      });
+      ctx.beginPath(); ctx.arc(px2,py2,p.r*(1+g*.6),0,Math.PI*2);
+      ctx.fillStyle=p.col+(0.35+g*.5)+')'; ctx.fill();
+    });
+  }
+
+  /* ════ HYPERCUBE ════ */
+  function drawHypercube(ctx,t){
+    a1=t*.00020; a2=t*.00016; a3=t*.00012; a4=t*.000095;
+    const proj=verts4.map(v=>p4to2(rot4(v)));
+    ctx.save();
+    const ox=(mx-window.parent.innerWidth/2)*.04;
+    const oy=(my-window.parent.innerHeight/2)*.04;
+    ctx.translate(ox,oy);
+    edges4.forEach(([i,j])=>{
+      const a=proj[i],b=proj[j];
+      const d=(a.depth+b.depth)/2;
+      ctx.beginPath(); ctx.moveTo(a.px,a.py); ctx.lineTo(b.px,b.py);
+      ctx.strokeStyle=`rgba(127,119,221,${Math.min(.65,d*.14)})`;
+      ctx.lineWidth=Math.min(1.6,d*.32); ctx.stroke();
+    });
+    proj.forEach(p=>{
+      const g2=ctx.createRadialGradient(p.px,p.py,0,p.px,p.py,5);
+      g2.addColorStop(0,`rgba(210,205,255,${Math.min(.9,p.depth*.2)})`);
+      g2.addColorStop(1,'rgba(210,205,255,0)');
+      ctx.beginPath(); ctx.arc(p.px,p.py,3,0,Math.PI*2);
+      ctx.fillStyle=g2; ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /* ════ MAIN LOOP ════ */
+  let start=null;
+  function frame(ts){
+    if(!start) start=ts;
+    const t=ts-start;
+    const W2=W(),H2=H();
+
+    bx.clearRect(0,0,W2,H2);
+    bx.fillStyle='#04020f'; bx.fillRect(0,0,W2,H2);
+    drawAurora(bx,t);
+    drawGrid(bx,t);
+
+    fx.clearRect(0,0,W2,H2);
+    drawChartLines(fx,t);
+    drawOrbits(fx,t);
+    drawHypercube(fx,t);
+    drawCandles(fx,t);
+    drawParticles(fx,t);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
